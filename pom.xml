@@ -10,7 +10,7 @@
 
     <properties>
         <kotlin.code.style>official</kotlin.code.style>
-        <kotlin_version>1.7.22</kotlin_version>
+        <kotlin_version>1.7.21</kotlin_version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
