@@ -4,6 +4,7 @@ import cn.nukkit.Player
 import cn.nukkit.network.CompressionProvider
 import cn.nukkit.network.protocol.DataPacket
 import cn.nukkit.network.session.NetworkPlayerSession
+import java.net.InetSocketAddress
 
 /**
  * 2022/12/3<br></br>
@@ -12,7 +13,8 @@ import cn.nukkit.network.session.NetworkPlayerSession
  * @author huanmeng_qwq
  */
 class DummyNetworkPlayerSession(
-    private val player: Player
+    private val botDummySourceInterface: BotDummySourceInterface,
+    private val address: InetSocketAddress
 ) : NetworkPlayerSession {
     private var compressionProvider: CompressionProvider = CompressionProvider.NONE
 
@@ -20,7 +22,7 @@ class DummyNetworkPlayerSession(
     override fun sendImmediatePacket(dataPacket: DataPacket, runnable: Runnable) {}
     override fun disconnect(s: String) {}
     override fun getPlayer(): Player {
-        return player
+        return botDummySourceInterface.player2Address[address]!!
     }
 
 

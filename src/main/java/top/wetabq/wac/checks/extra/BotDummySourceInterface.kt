@@ -19,7 +19,7 @@ class BotDummySourceInterface : SourceInterface {
 
     private val players = HashMap<String, FakePlayerBot>()
     private val identifiers = ConcurrentHashMap<Int, String>()
-    private val player2Address = HashMap<InetSocketAddress, Player>()
+    val player2Address = HashMap<InetSocketAddress, Player>()
 
     fun getPlayers(): Map<String, FakePlayerBot> {
         return players
@@ -45,8 +45,8 @@ class BotDummySourceInterface : SourceInterface {
         return 0
     }
 
-    override fun getSession(p0: InetSocketAddress?): NetworkPlayerSession {
-        return DummyNetworkPlayerSession(player2Address[p0]!!)
+    override fun getSession(address: InetSocketAddress?): NetworkPlayerSession {
+        return DummyNetworkPlayerSession(this, address!!)
     }
 
     fun open(identifier: String, address: InetAddress, port: Int, clientID: Long, targetPlayer: Player): FakePlayerBot {
