@@ -4,9 +4,9 @@ import cn.nukkit.Player
 import cn.nukkit.Server
 import cn.nukkit.network.SourceInterface
 import cn.nukkit.network.protocol.DataPacket
+import cn.nukkit.network.session.NetworkPlayerSession
 import java.net.InetAddress
 import java.net.InetSocketAddress
-import java.util.HashMap
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -19,6 +19,7 @@ class BotDummySourceInterface : SourceInterface {
 
     private val players = HashMap<String, FakePlayerBot>()
     private val identifiers = ConcurrentHashMap<Int, String>()
+    private val player2Address = HashMap<InetSocketAddress, Player>()
 
     fun getPlayers(): Map<String, FakePlayerBot> {
         return players
@@ -44,10 +45,15 @@ class BotDummySourceInterface : SourceInterface {
         return 0
     }
 
-    fun open(identifier: String, address: InetAddress, port: Int, clientID: Long,targetPlayer: Player): FakePlayerBot {
-        val player = FakePlayerBot(this, clientID, address, port,targetPlayer)
+    override fun getSession(p0: InetSocketAddress?): NetworkPlayerSession {
+        return DummyNetworkPlayerSession(player2Address[p0]!!)
+    }
+
+    fun open(identifier: String, address: InetAddress, port: Int, clientID: Long, targetPlayer: Player): FakePlayerBot {
+        val player = FakePlayerBot(this, clientID, address, port, targetPlayer)
         this.players[identifier] = player
         this.identifiers[player.rawHashCode()] = identifier
+        this.player2Address[InetSocketAddress(address, port)] = player
         Server.getInstance().addPlayer(InetSocketAddress(address, port), player)
         return player
     }
