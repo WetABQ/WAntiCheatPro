@@ -24,26 +24,12 @@ class WAntiCheatPro : PluginBase() {
         var TITLE : String = TextFormat.colorize("&6&lWAC &r&c» ")
         const val VERSION = "v1.0.0"
         lateinit var df: DefaultConfig
-        var abs: Boolean = false
-        var vvv: Boolean = false
-        var sda: Boolean = false // License
-        var dsa: Boolean = false
-        var s1: Long = Random().nextLong()
         lateinit var skin: Skin
 
         @JvmStatic
         fun translateMessage(str: String) : String {
             return TextFormat.colorize(str.replace("{WACTitle}",WAntiCheatPro.TITLE).replace("{enter}","\n"))
         }
-
-        @JvmStatic
-        fun a() : Boolean = sda
-
-        @JvmStatic
-        fun b() : Boolean = vvv
-
-        @JvmStatic
-        fun c() : Boolean = dsa
 
     }
 
