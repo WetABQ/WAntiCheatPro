@@ -6,4 +6,3 @@ load: POSTWORLD
 author: WetABQ
 depend:
   - "KotlinLib"
-  - "NPLKernel"
