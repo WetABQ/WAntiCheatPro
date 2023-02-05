@@ -5,7 +5,6 @@ import cn.nukkit.Player
 import cn.nukkit.event.Event
 import cn.nukkit.event.player.PlayerMoveEvent
 import cn.nukkit.event.server.DataPacketReceiveEvent
-import cn.nukkit.math.AxisAlignedBB
 import cn.nukkit.network.protocol.PlayerAuthInputPacket
 import top.wetabq.wac.WAntiCheatPro
 import top.wetabq.wac.checks.Check
