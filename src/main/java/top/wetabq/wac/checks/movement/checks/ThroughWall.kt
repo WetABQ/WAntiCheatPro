@@ -5,6 +5,7 @@ import cn.nukkit.Player
 import cn.nukkit.event.Event
 import cn.nukkit.event.player.PlayerMoveEvent
 import cn.nukkit.event.server.DataPacketReceiveEvent
+import cn.nukkit.math.AxisAlignedBB
 import cn.nukkit.network.protocol.PlayerAuthInputPacket
 import top.wetabq.wac.WAntiCheatPro
 import top.wetabq.wac.checks.Check
@@ -48,6 +49,7 @@ class ThroughWall : Check<MovingCheckData>() {
         if (checkData is MovingCheckData && onMotion) {
             if (player.gamemode == 0 && !player.adventureSettings[AdventureSettings.Type.NO_CLIP]) {
                 val radius = player.width.toDouble() / 2.0
+                //PM1E核心API变动 没有 SimpleAxisAlignedBB
                 val bb = player.getBoundingBox().clone().setBounds(
                     player.x - radius + 0.25, player.y + 1.5, player.z - radius + 0.25,
                     player.x + radius - 0.25, player.y + (player.height * player.scale) - 0.1, player.z + radius - 0.25
