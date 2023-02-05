@@ -13,7 +13,8 @@ import top.wetabq.wac.module.exception.RegModuleException
 import top.wetabq.wac.module.group.RegGroupContext
 import top.wetabq.wac.module.group.RegGroupModule
 import java.lang.reflect.ParameterizedType
-
+import java.util.*
+import kotlin.collections.HashMap
 
 
 /**
@@ -83,7 +84,7 @@ abstract class Check<out D : CheckData> : WACModule<RegGroupModule,RegGroupConte
     }
 
     open fun checkCheat(player: Player,checkData: CheckData,event: Event?,df : DefaultConfig): Boolean {
-        if (!df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_SWITCH].toString().toBoolean()) return false
+        if (!df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.lowercase(Locale.getDefault()) + ConfigPaths.CHECKS_SWITCH].toString().toBoolean()) return false
         return true
     }
 
