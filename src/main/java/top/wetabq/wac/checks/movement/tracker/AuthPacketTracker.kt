@@ -13,12 +13,18 @@ import top.wetabq.wac.module.DefaultModuleName
 import java.util.*
 import kotlin.math.pow
 
+/**
+ * WAntiCheatPro
+ *
+ * @author WetABQ Copyright (c) 2023/2/5
+ * @version 1.0
+ */
 class AuthPacketTracker(player: Player, size: Int, private val checkData: MovingCheckData) :
     CheckTracker<PlayerAuthInputPacket>(player, size) {
 
     private var checkPacketCountTime = System.currentTimeMillis()
     private var sendAuthPacketCount = 0
-    var packetCountQueue = LinkedList<Int>()
+    private var packetCountQueue = LinkedList<Int>()
     var sendVariance = 0.0
 
     override fun addT(t: PlayerAuthInputPacket) {
