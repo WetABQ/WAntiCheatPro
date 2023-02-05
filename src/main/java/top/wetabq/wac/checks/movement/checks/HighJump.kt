@@ -134,9 +134,9 @@ class HighJump : Check<MovingCheckData>() {
     override fun checkCheat(player: Player, checkData: CheckData, event: Event?, df: DefaultConfig): Boolean {
         if (!super.checkCheat(player, checkData, event, df)) return true
         val authMode = WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.SERVER_AUTH
-        val onMotion = event is PlayerMoveEvent && !authMode
+        val onMotion = (event is PlayerMoveEvent && !authMode)
                 || if (event is DataPacketReceiveEvent) event.packet is PlayerAuthInputPacket && authMode else false
-        if (onMotion && WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.CLIENT_AUTH && checkData is MovingCheckData) {
+        if (onMotion && checkData is MovingCheckData) {
             /**
              * WAC CHECK from Fecraft&WAC
              */
@@ -147,13 +147,14 @@ class HighJump : Check<MovingCheckData>() {
                 if (!authMode) {
                     checkData.lowestY = player.y
                     checkData.lastHighestY = (event as PlayerMoveEvent).to.getY()
-                }else {
-                    checkData.lowestY = player.lastY
+                }else{
+                    //需要记录上一次的y轴
+                    checkData.lowestY = player.y
                     checkData.lastHighestY = ((event as DataPacketReceiveEvent).packet as PlayerAuthInputPacket).position.y.toDouble()
                 }
                 checkData.lastOnGround = player.location
                 checkData.lastJumpLocation = player.location
-                checkDebug(player, "Clean HJ Data!!")
+                //checkDebug(player, "Clean HJ Data!!")
             } else {
                 if (player.y - checkData.lowestY > heightLimit && !player.hasEffect(Effect.JUMP) && canCheck(
                         player, checkData
@@ -166,7 +167,7 @@ class HighJump : Check<MovingCheckData>() {
                         player,
                         "HJ+: CHECKED 1 vl=${(player.y - checkData.lowestY) - heightLimit} totalVl=${checkData.highJumpVL}"
                     )
-                    if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString()
+                    if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.lowercase(Locale.getDefault()) + ConfigPaths.CHECKS_CANCELEVENT].toString()
                             .toBoolean()
                         && !authMode) event!!.setCancelled()
                 } else {
@@ -205,7 +206,7 @@ class HighJump : Check<MovingCheckData>() {
                                 player, "HJ+: CHECKED 2 vl=${realHeight - jumpHeight} totalVl=${checkData.highJumpVL}"
                             )
                             if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.lowercase(Locale.getDefault()) + ConfigPaths.CHECKS_CANCELEVENT].toString()
-                                    .toBoolean() && !authMode) event!!.setCancelled()
+                                    .toBoolean() && !authMode) event?.setCancelled()
                         } else {
                             //reduce VL
                             checkData.highJumpVL *= 0.98
@@ -221,8 +222,8 @@ class HighJump : Check<MovingCheckData>() {
                                 player,
                                 "HJ+: CHECKED 3 vl=${(player.y - checkData.lastJumpLocation.y) - heightLimit} totalVl=${checkData.highJumpVL}"
                             )
-                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString()
-                                    .toBoolean() && !authMode) event!!.setCancelled()
+                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.lowercase(Locale.getDefault()) + ConfigPaths.CHECKS_CANCELEVENT].toString()
+                                    .toBoolean() && !authMode) event?.setCancelled()
                         } else {
                             checkData.highJumpVL *= 0.98
                         }
@@ -239,8 +240,8 @@ class HighJump : Check<MovingCheckData>() {
                                 player,
                                 "HJ+: CHECKED vl=${player.y - checkData.lastJumpLocation.y} totalVl=${checkData.highJumpVL}"
                             )
-                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString()
-                                    .toBoolean() && !authMode) event!!.setCancelled()
+                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.lowercase(Locale.getDefault()) + ConfigPaths.CHECKS_CANCELEVENT].toString()
+                                    .toBoolean() && !authMode) event?.setCancelled()
                         } else {
                             checkData.highJumpVL *= 0.98
                         }
