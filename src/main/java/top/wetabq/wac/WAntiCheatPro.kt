@@ -8,7 +8,6 @@ import top.wetabq.wac.module.DefaultModuleName
 import top.wetabq.wac.module.WACModuleManager
 import top.wetabq.wac.module.exception.ModuleNotRegisterException
 import top.wetabq.wac.utils.MetricsLite
-import java.util.*
 import javax.imageio.ImageIO
 
 /**
@@ -25,10 +24,11 @@ class WAntiCheatPro : PluginBase() {
         const val VERSION = "v1.0.0"
         lateinit var df: DefaultConfig
         lateinit var skin: Skin
+        lateinit var protocolType: ProtocolType
 
         @JvmStatic
         fun translateMessage(str: String) : String {
-            return TextFormat.colorize(str.replace("{WACTitle}",WAntiCheatPro.TITLE).replace("{enter}","\n"))
+            return TextFormat.colorize(str.replace("{WACTitle}",TITLE).replace("{enter}","\n"))
         }
 
     }
@@ -43,6 +43,7 @@ class WAntiCheatPro : PluginBase() {
         dskin.setSkinData(ImageIO.read(skinStream))
         skin = dskin
         instance = this
+        this.verifyProtocolType()
     }
 
     override fun onEnable() {
@@ -55,6 +56,22 @@ class WAntiCheatPro : PluginBase() {
 
     override fun onDisable() {
         moduleManager.disableAllModule()
+    }
+
+    private fun verifyProtocolType() {
+        protocolType = try {
+            val clazz = Class.forName("cn.nukkit.Nukkit")
+            clazz.getField("NUKKIT_PM1E")
+            if (this.server.getPropertyBoolean("server-authoritative-block-breaking") ||
+                this.server.getPropertyString("server-authoritative-movement") == "server-auth")
+                ProtocolType.SERVER_AUTH else ProtocolType.CLIENT_AUTH
+        } catch (exception : NoSuchFileException) {
+            ProtocolType.SERVER_AUTH
+        }
+    }
+
+    enum class ProtocolType {
+        CLIENT_AUTH, SERVER_AUTH
     }
 
 }
