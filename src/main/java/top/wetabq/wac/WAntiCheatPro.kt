@@ -25,6 +25,7 @@ class WAntiCheatPro : PluginBase() {
         lateinit var df: DefaultConfig
         lateinit var skin: Skin
         lateinit var protocolType: ProtocolType
+        lateinit var apiBridge : VersionBridge
 
         @JvmStatic
         fun translateMessage(str: String) : String {
@@ -62,16 +63,22 @@ class WAntiCheatPro : PluginBase() {
         protocolType = try {
             val clazz = Class.forName("cn.nukkit.Nukkit")
             clazz.getField("NUKKIT_PM1E")
+            apiBridge = VersionBridge.PM1E
             if (this.server.getPropertyBoolean("server-authoritative-block-breaking") ||
                 this.server.getPropertyString("server-authoritative-movement") == "server-auth")
                 ProtocolType.SERVER_AUTH else ProtocolType.CLIENT_AUTH
         } catch (exception : NoSuchFileException) {
+            apiBridge = VersionBridge.Vanilla
             ProtocolType.SERVER_AUTH
         }
     }
 
     enum class ProtocolType {
         CLIENT_AUTH, SERVER_AUTH
+    }
+
+    enum class VersionBridge {
+        Vanilla, PM1E
     }
 
 }
