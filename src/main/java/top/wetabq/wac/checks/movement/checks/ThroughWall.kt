@@ -43,6 +43,7 @@ class ThroughWall : Check<MovingCheckData>() {
 
     override fun checkCheat(player: Player, checkData: CheckData, event: Event?, df: DefaultConfig): Boolean {
         if (!super.checkCheat(player, checkData, event, df)) return true
+        if (WAntiCheatPro.apiBridge == WAntiCheatPro.VersionBridge.PM1E) return true
         val authMode = WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.SERVER_AUTH
         val onMotion = (!authMode && event is PlayerMoveEvent) ||
                 if (event is DataPacketReceiveEvent) authMode && event.packet is PlayerAuthInputPacket else false
