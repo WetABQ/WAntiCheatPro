@@ -10,6 +10,7 @@ import cn.nukkit.event.server.DataPacketReceiveEvent
 import cn.nukkit.item.Item
 import cn.nukkit.network.protocol.MovePlayerPacket
 import cn.nukkit.network.protocol.PlayerActionPacket
+import cn.nukkit.network.protocol.PlayerAuthInputPacket
 import top.wetabq.wac.WAntiCheatPro
 import top.wetabq.wac.checks.Check
 import top.wetabq.wac.checks.CheckType
@@ -78,9 +79,17 @@ class MovingCheckListener : Listener {
                 (noFall?.getPlayerCheckData(player) as MovingCheckData?)?.setNoCheck(10+player.ping)
                 (speed?.getPlayerCheckData(player) as MovingCheckData?)?.setNoCheck(10+player.ping)
             }
-            if (packet is MovePlayerPacket) {
+            if (packet is MovePlayerPacket && WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.CLIENT_AUTH) {
                 (noFall?.getPlayerCheckData(player) as MovingCheckData?)?.movePacketTracker?.addT(packet)
                 (speed?.getPlayerCheckData(player) as MovingCheckData?)?.movePacketTracker?.addT(packet)
+            }
+            if (packet is PlayerAuthInputPacket && WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.SERVER_AUTH) {
+                (noFall?.getPlayerCheckData(player) as MovingCheckData?)?.authPacketTracker?.addT(packet)
+                (speed?.getPlayerCheckData(player) as MovingCheckData?)?.authPacketTracker?.addT(packet)
+                val highJump = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.HIGHJUMP) as HighJump?)
+                highJump?.checkCheat(event.player, highJump.getPlayerCheckData(event.player), event)
+                val throughWall = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.THROUGHWALL) as ThroughWall?)
+                throughWall?.checkCheat(event.player, throughWall.getPlayerCheckData(event.player), event)
             }
             if (packet is PlayerActionPacket) {
                 val size = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_TRACKERSIZE].toString().toInt()
@@ -135,7 +144,8 @@ class MovingCheckListener : Listener {
 
     @EventHandler
     fun onMove(event: PlayerMoveEvent) {
-        if (!event.isCancelled) {
+        //客户端验证
+        if (!event.isCancelled && WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.CLIENT_AUTH) {
             val highJump = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.HIGHJUMP) as HighJump?)
             highJump?.checkCheat(event.player, highJump.getPlayerCheckData(event.player), event)
             val throughWall = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.THROUGHWALL) as ThroughWall?)

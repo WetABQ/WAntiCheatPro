@@ -6,6 +6,7 @@ import cn.nukkit.Server
 import cn.nukkit.block.Block
 import cn.nukkit.event.Event
 import cn.nukkit.event.player.PlayerMoveEvent
+import cn.nukkit.event.server.DataPacketReceiveEvent
 import cn.nukkit.item.Item
 import cn.nukkit.scheduler.AsyncTask
 import top.wetabq.wac.checks.Check
@@ -17,6 +18,7 @@ import top.wetabq.wac.config.module.DefaultConfig
 import top.wetabq.wac.module.group.RegGroupModule
 import cn.nukkit.potion.Effect
 import cn.nukkit.network.protocol.MobEffectPacket
+import cn.nukkit.network.protocol.PlayerAuthInputPacket
 import top.wetabq.wac.WAntiCheatPro
 import top.wetabq.wac.checks.fight.FightCheckData
 import top.wetabq.wac.checks.fight.checks.Critical
@@ -25,6 +27,7 @@ import top.wetabq.wac.config.ConfigPaths
 import top.wetabq.wac.module.DefaultModuleName
 import top.wetabq.wac.module.ModuleVersion
 import java.util.*
+import kotlin.math.pow
 
 
 /**
@@ -76,13 +79,10 @@ class HighJump : Check<MovingCheckData>() {
                     }
                 }
 
-            })
-                    .addConfigPath(ConfigPaths.CHECKS_MOVING_HIGHJUMP_JUMPHEIGHT, 1.8)
-                    .addConfigPath(ConfigPaths.CHECKS_MOVING_HIGHJUMP_ATTACKTIME, 800L)
-                    .setModuleName(DefaultModuleName.HIGHJUMP)
-                    .setModuleVersion(ModuleVersion(1, 0, 3, 21))
-                    .setModuleAuthor("WetABQ")
-                    .context()
+            }).addConfigPath(ConfigPaths.CHECKS_MOVING_HIGHJUMP_JUMPHEIGHT, 1.8)
+                .addConfigPath(ConfigPaths.CHECKS_MOVING_HIGHJUMP_ATTACKTIME, 800L)
+                .setModuleName(DefaultModuleName.HIGHJUMP).setModuleVersion(ModuleVersion(1, 0, 3, 21))
+                .setModuleAuthor("WetABQ").context()
         }
     }
 
@@ -93,9 +93,19 @@ class HighJump : Check<MovingCheckData>() {
     private fun canCheck(player: Player, checkData: MovingCheckData): Boolean {
         var flag = true
         val speed = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.SPEED) as Speed?)
-        val sendVar = ((speed?.getPlayerCheckData(player) as MovingCheckData?)?.movePacketTracker?.sendVariance
+        val authMode = WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.SERVER_AUTH
+        val sendVar =
+            if (authMode) ((speed?.getPlayerCheckData(player) as MovingCheckData?)?.authPacketTracker?.sendVariance
+                ?: 1) as Double else ((speed?.getPlayerCheckData(player) as MovingCheckData?)?.movePacketTracker?.sendVariance
                 ?: 1) as Double
-        if (player.hasEffect(Effect.SLOW_FALLING) || player.hasEffect(Effect.LEVITATION) || sendVar > 30.toDouble() || player.level.getBlockIdAt(player.x.toInt(), player.y.toInt() - 1, player.z.toInt()) == Block.SLIME_BLOCK || player.level.getBlockIdAt(player.x.toInt(), player.y.toInt() - 2, player.z.toInt()) == Block.SLIME_BLOCK || player.level.getBlockIdAt(player.x.toInt(), player.y.toInt() - 3, player.z.toInt()) == Block.SLIME_BLOCK) {
+        if (player.hasEffect(Effect.SLOW_FALLING) || player.hasEffect(Effect.LEVITATION) || sendVar > 30.toDouble() || player.level.getBlockIdAt(
+                player.x.toInt(), player.y.toInt() - 1, player.z.toInt()
+            ) == Block.SLIME_BLOCK || player.level.getBlockIdAt(
+                player.x.toInt(), player.y.toInt() - 2, player.z.toInt()
+            ) == Block.SLIME_BLOCK || player.level.getBlockIdAt(
+                player.x.toInt(), player.y.toInt() - 3, player.z.toInt()
+            ) == Block.SLIME_BLOCK
+        ) {
             checkData.setJumpNoCheck(20 * 3)
             flag = false
         }
@@ -107,7 +117,10 @@ class HighJump : Check<MovingCheckData>() {
             checkDebug(player, "Clean HJ Data!!")
             checkData.setJumpNoCheck(20 * 5)
         }
-        if (!(checkData.doJumpCheck() && (player.isSurvival || player.isAdventure) && player.inventory.chestplate.id != Item.ELYTRA && !player.isSleeping && player.riding == null && player.y >= 0 && !player.adventureSettings.get(AdventureSettings.Type.ALLOW_FLIGHT))) {
+        if (!(checkData.doJumpCheck() && (player.isSurvival || player.isAdventure) && player.inventory.chestplate.id != Item.ELYTRA && !player.isSleeping && player.riding == null && player.y >= 0 && !player.adventureSettings.get(
+                AdventureSettings.Type.ALLOW_FLIGHT
+            ))
+        ) {
             checkData.fall4block = null
             checkData.lowestY = player.y
             checkData.lastOnGround = player.location
@@ -120,7 +133,10 @@ class HighJump : Check<MovingCheckData>() {
 
     override fun checkCheat(player: Player, checkData: CheckData, event: Event?, df: DefaultConfig): Boolean {
         if (!super.checkCheat(player, checkData, event, df)) return true
-        if (event is PlayerMoveEvent && checkData is MovingCheckData) {
+        val authMode = WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.SERVER_AUTH
+        val onMotion = event is PlayerMoveEvent && !authMode
+                || if (event is DataPacketReceiveEvent) event.packet is PlayerAuthInputPacket && authMode else false
+        if (onMotion && WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.CLIENT_AUTH && checkData is MovingCheckData) {
             /**
              * WAC CHECK from Fecraft&WAC
              */
@@ -128,18 +144,31 @@ class HighJump : Check<MovingCheckData>() {
             if (checkData.isAttcked()) return true
             if (!PlayerUtils.playerInAir(player) || !canCheck(player, checkData)) {
                 checkData.fall4block = null
-                checkData.lowestY = player.y
-                checkData.lastHighestY = event.to.getY()
+                if (!authMode) {
+                    checkData.lowestY = player.y
+                    checkData.lastHighestY = (event as PlayerMoveEvent).to.getY()
+                }else {
+                    checkData.lowestY = player.lastY
+                    checkData.lastHighestY = ((event as DataPacketReceiveEvent).packet as PlayerAuthInputPacket).position.y.toDouble()
+                }
                 checkData.lastOnGround = player.location
                 checkData.lastJumpLocation = player.location
                 checkDebug(player, "Clean HJ Data!!")
             } else {
-                if (player.y - checkData.lowestY > heightLimit && !player.hasEffect(Effect.JUMP) && canCheck(player, checkData) && player.inAirTicks > 3) {
+                if (player.y - checkData.lowestY > heightLimit && !player.hasEffect(Effect.JUMP) && canCheck(
+                        player, checkData
+                    ) && player.inAirTicks > 3
+                ) {
                     checkData.setNoCheck(5)
                     val diff = (player.y - checkData.lowestY) - heightLimit
                     if (checkData.playerCheat(checkData.highJumpVL, diff, "WAC Check #10")) checkData.highJumpVL += diff
-                    checkDebug(player, "HJ+: CHECKED 1 vl=${(player.y - checkData.lowestY) - heightLimit} totalVl=${checkData.highJumpVL}")
-                    if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString().toBoolean()) event.setCancelled()
+                    checkDebug(
+                        player,
+                        "HJ+: CHECKED 1 vl=${(player.y - checkData.lowestY) - heightLimit} totalVl=${checkData.highJumpVL}"
+                    )
+                    if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString()
+                            .toBoolean()
+                        && !authMode) event!!.setCancelled()
                 } else {
                     //reduce VL
                     checkData.highJumpVL *= 0.98
@@ -162,14 +191,21 @@ class HighJump : Check<MovingCheckData>() {
                 val fightCheckData = (critical?.getPlayerCheckData(player) as FightCheckData?)
                 if (fightCheckData?.startJump!!) {
                     if (player.hasEffect(Effect.JUMP)) {
-                        var jumpHeight = Math.pow(player.getEffect(Effect.JUMP).amplifier + 4.2, 2.toDouble()) / 16.toDouble()
+                        var jumpHeight =
+                            (player.getEffect(Effect.JUMP).amplifier + 4.2).pow(2.toDouble()) / 16.toDouble()
                         jumpHeight += heightLimit
                         val realHeight = player.y - checkData.lastJumpLocation.y
                         if (realHeight > jumpHeight && canCheck(player, checkData)) {
                             val diff = realHeight - jumpHeight
-                            if (checkData.playerCheat(checkData.highJumpVL, diff, "WAC Check #10")) checkData.highJumpVL += diff
-                            checkDebug(player, "HJ+: CHECKED 2 vl=${realHeight - jumpHeight} totalVl=${checkData.highJumpVL}")
-                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString().toBoolean()) event.setCancelled()
+                            if (checkData.playerCheat(
+                                    checkData.highJumpVL, diff, "WAC Check #10"
+                                )
+                            ) checkData.highJumpVL += diff
+                            checkDebug(
+                                player, "HJ+: CHECKED 2 vl=${realHeight - jumpHeight} totalVl=${checkData.highJumpVL}"
+                            )
+                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.lowercase(Locale.getDefault()) + ConfigPaths.CHECKS_CANCELEVENT].toString()
+                                    .toBoolean() && !authMode) event!!.setCancelled()
                         } else {
                             //reduce VL
                             checkData.highJumpVL *= 0.98
@@ -177,9 +213,16 @@ class HighJump : Check<MovingCheckData>() {
                     } else {
                         if (canCheck(player, checkData) && player.y - checkData.lastJumpLocation.y > heightLimit) {
                             val diff = (player.y - checkData.lastJumpLocation.y) - heightLimit
-                            if (checkData.playerCheat(checkData.highJumpVL, diff, "WAC Check #10")) checkData.highJumpVL += diff
-                            checkDebug(player, "HJ+: CHECKED 3 vl=${(player.y - checkData.lastJumpLocation.y) - heightLimit} totalVl=${checkData.highJumpVL}")
-                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString().toBoolean()) event.setCancelled()
+                            if (checkData.playerCheat(
+                                    checkData.highJumpVL, diff, "WAC Check #10"
+                                )
+                            ) checkData.highJumpVL += diff
+                            checkDebug(
+                                player,
+                                "HJ+: CHECKED 3 vl=${(player.y - checkData.lastJumpLocation.y) - heightLimit} totalVl=${checkData.highJumpVL}"
+                            )
+                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString()
+                                    .toBoolean() && !authMode) event!!.setCancelled()
                         } else {
                             checkData.highJumpVL *= 0.98
                         }
@@ -188,9 +231,16 @@ class HighJump : Check<MovingCheckData>() {
                     if (canCheck(player, checkData) && !PlayerUtils.playerInLadder(player)) {
                         if (player.y - checkData.lastJumpLocation.y > 0) {
                             val diff = (player.y - checkData.lastJumpLocation.y) * 2f
-                            if (checkData.playerCheat(checkData.highJumpVL, diff, "WAC Check #10")) checkData.highJumpVL += diff
-                            checkDebug(player, "HJ+: CHECKED vl=${player.y - checkData.lastJumpLocation.y} totalVl=${checkData.highJumpVL}")
-                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString().toBoolean()) event.setCancelled()
+                            if (checkData.playerCheat(
+                                    checkData.highJumpVL, diff, "WAC Check #10"
+                                )
+                            ) checkData.highJumpVL += diff
+                            checkDebug(
+                                player,
+                                "HJ+: CHECKED vl=${player.y - checkData.lastJumpLocation.y} totalVl=${checkData.highJumpVL}"
+                            )
+                            if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString()
+                                    .toBoolean() && !authMode) event!!.setCancelled()
                         } else {
                             checkData.highJumpVL *= 0.98
                         }
