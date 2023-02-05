@@ -25,7 +25,6 @@ import top.wetabq.wac.config.ConfigPaths
 import top.wetabq.wac.module.DefaultModuleName
 import top.wetabq.wac.module.ModuleVersion
 import java.util.*
-import kotlin.math.pow
 
 
 /**
@@ -163,7 +162,7 @@ class HighJump : Check<MovingCheckData>() {
                 val fightCheckData = (critical?.getPlayerCheckData(player) as FightCheckData?)
                 if (fightCheckData?.startJump!!) {
                     if (player.hasEffect(Effect.JUMP)) {
-                        var jumpHeight = (player.getEffect(Effect.JUMP).amplifier + 4.2).pow(2.toDouble()) / 16.toDouble()
+                        var jumpHeight = Math.pow(player.getEffect(Effect.JUMP).amplifier + 4.2, 2.toDouble()) / 16.toDouble()
                         jumpHeight += heightLimit
                         val realHeight = player.y - checkData.lastJumpLocation.y
                         if (realHeight > jumpHeight && canCheck(player, checkData)) {

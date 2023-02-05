@@ -6,7 +6,6 @@ import cn.nukkit.event.Event
 import cn.nukkit.event.server.DataPacketReceiveEvent
 import cn.nukkit.math.Vector3
 import cn.nukkit.network.protocol.MovePlayerPacket
-import cn.nukkit.network.protocol.PlayerAuthInputPacket
 import top.wetabq.wac.WAntiCheatPro
 import top.wetabq.wac.checks.Check
 import top.wetabq.wac.checks.CheckData
@@ -47,16 +46,16 @@ class NoFall : Check<MovingCheckData>() {
         if (player.isCreative || player.isSpectator) return true
         if (checkData is MovingCheckData && event is DataPacketReceiveEvent) {
             val packet = event.packet
-            if (packet is PlayerAuthInputPacket && !player.isSwimming && !player.isSleeping && player.riding == null && (player.isSurvival || player.isAdventure) && checkData.movePacketTracker.isFull()) {
+            if (packet is MovePlayerPacket && !player.isSwimming && !player.isSleeping && player.riding == null && (player.isSurvival || player.isAdventure) && checkData.movePacketTracker.isFull() && packet.mode != MovePlayerPacket.MODE_TELEPORT) {
                 if (player.level.getBlockIdAt(player.x.toInt(), player.y.toInt() - 1, player.z.toInt()) == Block.SLIME_BLOCK || player.level.getBlockIdAt(player.x.toInt(), player.y.toInt() - 2, player.z.toInt()) == Block.SLIME_BLOCK || player.level.getBlockIdAt(player.x.toInt(), player.y.toInt() - 3, player.z.toInt()) == Block.SLIME_BLOCK) checkData.setNoCheck(20*3)
                 val yLimit = df.defaultConfig[ConfigPaths.CHECKS_MOVING_NOFALL_YLIMIT].toString().toDouble()
                 val critical = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.CRITICAL) as Critical?)
                 val fightCheckData = (critical?.getPlayerCheckData(player) as FightCheckData?)
                 //checkDebug(player,"NF+: DEBUG FallY=${packet.y - checkData.movePacketTracker.getLast().y}")
-                if (fightCheckData?.startJump != true && packet.position.y - checkData.movePacketTracker.getLast().position.y > yLimit) {
-                    val diff = yLimit - (checkData.movePacketTracker.getLast().position.y - packet.position.y)
+                if (!(fightCheckData?.startJump?: false) && packet.y - checkData.movePacketTracker.getLast().y > yLimit) {
+                    val diff = yLimit - (checkData.movePacketTracker.getLast().y - packet.y)
                     if (checkData.playerCheat(checkData.noFallVL,diff,"WAC Check #12")) checkData.noFallVL += diff
-                    checkDebug(player,"NF+: CHECKED vl=${yLimit - (checkData.movePacketTracker.getLast().position.y - packet.position.y)} totalVl=${checkData.noFallVL}")
+                    checkDebug(player,"NF+: CHECKED vl=${yLimit - (checkData.movePacketTracker.getLast().y - packet.y)} totalVl=${checkData.noFallVL}")
                 } //没有衰减
             }
         } else throw CheckCheatException(this,"Incoming parameter error")
