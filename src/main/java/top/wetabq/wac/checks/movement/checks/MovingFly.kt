@@ -15,6 +15,7 @@ import top.wetabq.wac.config.ConfigPaths
 import top.wetabq.wac.config.module.DefaultConfig
 import top.wetabq.wac.module.DefaultModuleName
 import top.wetabq.wac.module.group.RegGroupModule
+import java.util.*
 
 /**
  * WAntiCheatPro
@@ -39,7 +40,9 @@ class MovingFly : Check<MovingCheckData>() {
 
     private fun canCheck(player: Player):Boolean {
         val speed = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.SPEED) as Speed?)
-        val sendVar = ((speed?.getPlayerCheckData(player) as MovingCheckData?)?.movePacketTracker?.sendVariance?:1) as Double
+        val sendVar = if (WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.SERVER_AUTH)
+            ((speed?.getPlayerCheckData(player) as MovingCheckData?)?.authPacketTracker?.sendVariance?:1) as Double
+        else ((speed?.getPlayerCheckData(player) as MovingCheckData?)?.movePacketTracker?.sendVariance?:1) as Double
         return sendVar < 30 && (player.isSurvival || player.isAdventure) && player.inventory.chestplate.id != Item.ELYTRA && !player.isSleeping && player.riding == null && player.y >= 0 && !player.adventureSettings.get(AdventureSettings.Type.ALLOW_FLIGHT)
     }
 
@@ -63,7 +66,7 @@ class MovingFly : Check<MovingCheckData>() {
                     if (d2.distance(f2) > 1 && d2.distance(f2) * 0.8 > cd.fall4block!!.y - player.y && !player.hasEffect(Effect.JUMP) && canCheck(player)) {
                         cd.setNoCheck(5)
                         val diff = d2.distance(f2) * 0.8 - (cd.fall4block!!.y - player.y)
-                        if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString().toBoolean()) event?.setCancelled()
+                        if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.lowercase(Locale.getDefault()) + ConfigPaths.CHECKS_CANCELEVENT].toString().toBoolean()) event?.setCancelled()
                         if (cd.playerCheat(cd.flyVL,diff,"WAC Check #11")) cd.flyVL += diff
                         checkDebug(player,"MF+: CHECKED vl=${d2.distance(f2) * 0.8 - (cd.fall4block!!.y - player.y)} totalVl=${cd.flyVL}")
                     } else {

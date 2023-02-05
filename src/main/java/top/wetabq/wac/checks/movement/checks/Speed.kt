@@ -2,13 +2,12 @@ package top.wetabq.wac.checks.movement.checks
 
 import cn.nukkit.AdventureSettings
 import cn.nukkit.Player
-import cn.nukkit.Server
 import cn.nukkit.event.Event
 import cn.nukkit.event.server.DataPacketReceiveEvent
 import cn.nukkit.item.Item
 import cn.nukkit.network.protocol.MovePlayerPacket
+import cn.nukkit.network.protocol.PlayerAuthInputPacket
 import cn.nukkit.potion.Effect
-import cn.nukkit.scheduler.AsyncTask
 import top.wetabq.wac.WAntiCheatPro
 import top.wetabq.wac.checks.Check
 import top.wetabq.wac.checks.CheckData
@@ -85,18 +84,21 @@ class Speed : Check<MovingCheckData>() {
         if (checkData is MovingCheckData && event is DataPacketReceiveEvent) {
             val packet = event.packet
             val highJump = (WAntiCheatPro.instance.moduleManager.getModule(DefaultModuleName.HIGHJUMP) as HighJump?)
-            if (packet is MovePlayerPacket && !player.isSwimming && !player.isInsideOfWater && !player.isSleeping && player.riding == null && (player.isSurvival || player.isAdventure) && checkData.movePacketTracker.isFull() && player.inventory.chestplate.id != Item.ELYTRA && !(highJump?.getPlayerCheckData(player) as MovingCheckData).isAttcked() && !player.hasEffect(Effect.SPEED) && !player.hasEffect(Effect.JUMP) && !player.adventureSettings.get(AdventureSettings.Type.ALLOW_FLIGHT)) {
-                if (checkData.movePacketTracker.sendVariance > 30 || !player.onGround) return true
-                val avg = checkData.movePacketTracker.getAverage()
+            val authMode = WAntiCheatPro.protocolType == WAntiCheatPro.ProtocolType.SERVER_AUTH
+            val onMotion = (authMode && packet is PlayerAuthInputPacket) || (!authMode && packet is MovePlayerPacket)
+            if (onMotion && !player.isSwimming && !player.isInsideOfWater && !player.isSleeping && player.riding == null && (player.isSurvival || player.isAdventure) && checkData.movePacketTracker.isFull() && player.inventory.chestplate.id != Item.ELYTRA && !(highJump?.getPlayerCheckData(player) as MovingCheckData).isAttcked() && !player.hasEffect(Effect.SPEED) && !player.hasEffect(Effect.JUMP) && !player.adventureSettings.get(AdventureSettings.Type.ALLOW_FLIGHT)) {
+                val limitedVariance = if (authMode) checkData.authPacketTracker.sendVariance else checkData.movePacketTracker.sendVariance
+                if (limitedVariance > 30 || !player.onGround) return true
+                val avg = if (authMode) checkData.authPacketTracker.getAverage() else checkData.movePacketTracker.getAverage()
                 val varianceLimit = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_MAXSPEED_PACKET_MAXVARIANCE].toString().toDouble()
-                val variance = checkData.movePacketTracker.getVariance()
                 val sneakingSpeedLimit = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_MAXSPEED_PACKET_SNEAKING].toString().toDouble()
                 val sprintSpeedLimit = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_MAXSPEED_PACKET_SPRINT].toString().toDouble()
                 var walkSpeedLimit = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_MAXSPEED_PACKET_WALK].toString().toDouble()
                 val sneakingAvgSpeedLimit = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_MAXSPEED_PACKET_SNEAKING_AVG].toString().toDouble()
                 val sprintAvgSpeedLimit = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_MAXSPEED_PACKET_SPRINT_AVG].toString().toDouble()
                 var walkAvgSpeedLimit = WAntiCheatPro.df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_MAXSPEED_PACKET_WALK_AVG].toString().toDouble()
-                val instantSpeed = checkData.movePacketTracker.getInstant(packet)
+                val instantSpeed = if (authMode) checkData.authPacketTracker.getInstant(packet as PlayerAuthInputPacket) else
+                    checkData.movePacketTracker.getInstant(packet as MovePlayerPacket)
                 //println("DEBUG player=${player.name} avg=$avg instantSpeed=$instantSpeed motionState=${checkData.motionState} v=${checkData.movePacketTracker.getVariance()} v2=${checkData.movePacketTracker.sendVariance}")
                 if (PlayerUtils.playerInS(player)) {
                     walkAvgSpeedLimit += 0.3
@@ -112,13 +114,13 @@ class Speed : Check<MovingCheckData>() {
                     if (checkData.playerCheat(checkData.speedVL, instantSpeed - walkSpeedLimit,"WAC Check #18")) checkData.speedVL += instantSpeed - walkSpeedLimit
                     checkDebug(player,"SD+: CHECKED 3 vl=${instantSpeed - walkSpeedLimit} totalVl=${checkData.speedVL}")
                     player.isSprinting = false
-                }else if (avg > sneakingAvgSpeedLimit && checkData.motionState == MovingCheckData.MotionState.SNEAKING && variance < varianceLimit) {
+                }else if (avg > sneakingAvgSpeedLimit && checkData.motionState == MovingCheckData.MotionState.SNEAKING && limitedVariance < varianceLimit) {
                     if (checkData.playerCheat(checkData.speedVL, avg - sneakingAvgSpeedLimit,"WAC Check #20")) checkData.speedVL += avg - sneakingAvgSpeedLimit
                     checkDebug(player,"SD+: CHECKED 4 vl=${avg - sneakingAvgSpeedLimit} totalVl=${checkData.speedVL}")
-                } else if (avg > sprintAvgSpeedLimit && checkData.motionState == MovingCheckData.MotionState.SPRINT && variance < varianceLimit) {
+                } else if (avg > sprintAvgSpeedLimit && checkData.motionState == MovingCheckData.MotionState.SPRINT && limitedVariance < varianceLimit) {
                     if (checkData.playerCheat(checkData.speedVL, avg - sprintAvgSpeedLimit,"WAC Check #21")) checkData.speedVL += avg - sprintAvgSpeedLimit
                     checkDebug(player,"SD+: CHECKED 5 vl=${avg - sprintAvgSpeedLimit} totalVl=${checkData.speedVL}")
-                } else if (avg > walkAvgSpeedLimit && checkData.motionState == MovingCheckData.MotionState.WALK && variance < varianceLimit) {
+                } else if (avg > walkAvgSpeedLimit && checkData.motionState == MovingCheckData.MotionState.WALK && limitedVariance < varianceLimit) {
                     if (checkData.playerCheat(checkData.speedVL, avg - walkAvgSpeedLimit,"WAC Check #22")) checkData.speedVL += avg - walkAvgSpeedLimit
                     checkDebug(player,"SD+: CHECKED 6 vl=${avg - walkAvgSpeedLimit} totalVl=${checkData.speedVL}")
                     player.isSprinting = false

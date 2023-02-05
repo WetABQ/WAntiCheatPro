@@ -5,6 +5,7 @@ import cn.nukkit.level.Location
 import cn.nukkit.math.Vector3
 import top.wetabq.wac.checks.Check
 import top.wetabq.wac.checks.CheckData
+import top.wetabq.wac.checks.movement.tracker.AuthPacketTracker
 import top.wetabq.wac.checks.movement.tracker.MovePacketTracker
 import top.wetabq.wac.checks.movement.tracker.PositionTracker
 import top.wetabq.wac.config.ConfigPaths
@@ -36,6 +37,8 @@ class MovingCheckData(p: Player, check: Check<MovingCheckData>, df: DefaultConfi
 
     val movePacketTracker = MovePacketTracker(p, df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_TRACKERSIZE].toString().toInt(), this)
     val positionTracker = PositionTracker(p, df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_TRACKERSIZE].toString().toInt())
+    //AuthPacket Tracker
+    val authPacketTracker = AuthPacketTracker(p,df.defaultConfig[ConfigPaths.CHECKS_MOVING_SPEED_TRACKERSIZE].toString().toInt(),this)
 
     fun isAttcked(): Boolean {
         return System.currentTimeMillis() - lastBeAttacked < df.defaultConfig[ConfigPaths.CHECKS_MOVING_HIGHJUMP_ATTACKTIME].toString().toLong()
