@@ -4,6 +4,8 @@ import cn.nukkit.AdventureSettings
 import cn.nukkit.Player
 import cn.nukkit.event.Event
 import cn.nukkit.event.player.PlayerMoveEvent
+import cn.nukkit.event.server.DataPacketReceiveEvent
+import cn.nukkit.network.protocol.PlayerAuthInputPacket
 import top.wetabq.wac.checks.Check
 import top.wetabq.wac.checks.CheckData
 import top.wetabq.wac.checks.CheckType
@@ -26,9 +28,7 @@ class ThroughWall : Check<MovingCheckData>() {
     override fun <T> register(registry: T) {
         super.register(registry)
         if (registry is RegGroupModule) {
-            registry.setModuleName(DefaultModuleName.THROUGHWALL)
-                    .setModuleAuthor("WetABQ")
-                    .context()
+            registry.setModuleName(DefaultModuleName.THROUGHWALL).setModuleAuthor("WetABQ").context()
         }
     }
 
@@ -36,27 +36,42 @@ class ThroughWall : Check<MovingCheckData>() {
         return CheckType.MOVING_THROUGHWALL
     }
 
-    override fun checkCheat(player: Player, checkData: CheckData, event: Event?, df: DefaultConfig):Boolean {
+    override fun checkCheat(player: Player, checkData: CheckData, event: Event?, df: DefaultConfig): Boolean {
         if (!super.checkCheat(player, checkData, event, df)) return true
-        if (checkData is MovingCheckData && event is PlayerMoveEvent) {
-            if (player.gamemode == 0 && !player.adventureSettings[AdventureSettings.Type.NO_CLIP]) {
-                val radius = player.width.toDouble() / 2.0
-                val bb = player.getBoundingBox().clone().setBounds(
-                        player.x - radius + 0.25, player.y + 1.5, player.z - radius + 0.25,
-                        player.x + radius - 0.25, player.y + (player.height * player.scale) - 0.1, player.z + radius - 0.25
-                )
-                for (block in player.getBlocksAround()) {
-                    if (block.collidesWithBB(bb) && block.isSolid && block.isNormalBlock && !block.canPassThrough()) {
-                        checkData.throughWallVL += 1.0
-                        checkData.setNoCheck(20)
-                        checkDebug(player, "TW+: CHECKED vl=1 totalVl=${checkData.throughWallVL}")
-                        checkData.playerCheat(checkData.throughWallVL, 1.0, "#WAC Check #19")
-                        if (df.defaultConfig[ConfigPaths.CHECKS + this.javaClass.name.toLowerCase() + ConfigPaths.CHECKS_CANCELEVENT].toString().toBoolean()) event.setCancelled()
+        val movePacket = if (event is DataPacketReceiveEvent) event.packet is PlayerAuthInputPacket else false
+        if (checkData is MovingCheckData && movePacket) {
+
+            var pm1e = false
+            try {
+                val clazz = Class.forName("cn.nukkit.Nukkit")
+                clazz.getField("NUKKIT_PM1E")
+                pm1e = true
+            } catch (ignore: Exception) {
+            }
+
+            if (!pm1e) {
+                if (player.gamemode == 0 && !player.adventureSettings[AdventureSettings.Type.NO_CLIP]) {
+                    val radius = player.width.toDouble() / 2.0
+                    val bb = player.getBoundingBox().clone().setBounds(
+                        player.x - radius + 0.25,
+                        player.y + 1.5,
+                        player.z - radius + 0.25,
+                        player.x + radius - 0.25,
+                        player.y + (player.height * player.scale) - 0.1,
+                        player.z + radius - 0.25
+                    )
+                    for (block in player.getBlocksAround()) {
+                        if (block.collidesWithBB(bb) && block.isSolid && block.isNormalBlock && !block.canPassThrough()) {
+                            checkData.throughWallVL += 1.0
+                            checkData.setNoCheck(20)
+                            checkDebug(player, "TW+: CHECKED vl=1 totalVl=${checkData.throughWallVL}")
+                            checkData.playerCheat(checkData.throughWallVL, 1.0, "#WAC Check #19")
+                        }
                     }
                 }
             }
 
-        } else throw CheckCheatException(this,"Incoming parameter error")
+        } else throw CheckCheatException(this, "Incoming parameter error")
         return true
     }
 
