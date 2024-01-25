@@ -67,7 +67,7 @@ class WAntiCheatPro : PluginBase() {
             if (this.server.getPropertyBoolean("server-authoritative-block-breaking") ||
                 this.server.getPropertyString("server-authoritative-movement") == "server-auth")
                 ProtocolType.SERVER_AUTH else ProtocolType.CLIENT_AUTH
-        } catch (exception : NoSuchFileException) {
+        } catch (exception : NoSuchFieldException) {
             apiBridge = VersionBridge.Vanilla
             ProtocolType.SERVER_AUTH
         }
